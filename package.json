@@ -1,0 +1,12 @@
+{
+  "name": "apex-scrim-scoreboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Apex Legends 群内娱乐赛 OB 积分榜，支持 ALGS 赛点制、单局录分与数据备份。",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^11.1.7"
+  }
+}

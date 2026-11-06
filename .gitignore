@@ -1,0 +1,8 @@
+node_modules/
+.runtime/
+.vercel/
+.netlify/
+.env
+data/state.json
+data/*.tmp
+*.log

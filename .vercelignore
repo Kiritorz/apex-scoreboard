@@ -1,0 +1,10 @@
+node_modules
+.runtime
+.netlify
+data
+server.js
+server-control.ps1
+*.cmd
+package.json
+package-lock.json
+*.log

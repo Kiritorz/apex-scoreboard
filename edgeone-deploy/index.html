@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#080a0e" />
+  <meta name="description" content="Apex Legends 青提杯记分板，支持 ALGS 赛点制、单局录入、队伍管理与数据导入导出。" />
+  <title>APEX 青提杯</title>
+  <link rel="icon" href="favicon.png" type="image/png" />
+  <link rel="apple-touch-icon" href="favicon.png" />
+  <link rel="preload" href="assets/fonts/SmileySans-Oblique.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="assets/fonts/oxanium-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="bg-refresh is-booting">
+  <div class="boot-loader" id="bootLoader" role="status" aria-live="polite" aria-label="正在加载赛事数据">
+    <div class="boot-loader-shell">
+      <span class="boot-loader-kicker">APEX QINGTI CUP</span>
+      <h1>APEX <b>青提杯</b></h1>
+      <div class="boot-loader-track" aria-hidden="true"><i></i></div>
+      <p id="bootStatus">正在连接赛事数据库…</p>
+    </div>
+  </div>
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop-grid"></div>
+    <div class="backdrop-prism"></div>
+    <div class="backdrop-glow backdrop-glow-a"></div>
+    <div class="backdrop-glow backdrop-glow-b"></div>
+    <div class="backdrop-aurora"></div>
+    <div class="backdrop-ribbon backdrop-ribbon-a"></div>
+    <div class="backdrop-ribbon backdrop-ribbon-b"></div>
+    <div class="backdrop-caustic"></div>
+    <div class="backdrop-refraction"></div>
+    <div class="backdrop-dots"></div>
+    <div class="backdrop-beam backdrop-beam-a"></div>
+    <div class="backdrop-beam backdrop-beam-b"></div>
+    <div class="backdrop-cycle"></div>
+    <div class="backdrop-slash backdrop-slash-a"></div>
+    <div class="backdrop-slash backdrop-slash-b"></div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="topbar">
+      <a class="brand" href="#standings" aria-label="回到总积分榜">
+        <span class="brand-mark" aria-hidden="true">
+          <img class="brand-logo" src="assets/apex-logo.png" alt="" />
+        </span>
+        <span class="brand-copy">
+          <span class="brand-name">APEX <b>SCOREBOARD</b></span>
+          <span class="brand-sub" id="brandEventName">青提杯</span>
+        </span>
+      </a>
+
+      <nav class="main-nav" aria-label="主导航">
+        <a href="#standings" data-nav="standings" class="active">积分排名</a>
+        <a href="#matches" data-nav="matches">对局记录</a>
+        <a href="#teams" data-nav="teams">参赛队伍</a>
+        <a href="#settings" data-nav="settings">赛事设置</a>
+      </nav>
+
+      <div class="top-actions">
+        <button class="ghost-btn legend-entry-btn" id="legendEntryBtn" type="button" title="分配传奇选择">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 20c.5-4 3-6 6.5-6s6 2 6.5 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>分配传奇</span>
+        </button>
+        <button class="primary-btn" id="addMatchBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <span>录入赛果</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="view active" id="view-standings" data-view="standings">
+        <div class="page-head">
+          <div class="page-heading">
+            <div class="event-title-row">
+              <h1 id="eventTitle">APEX 青提杯</h1>
+              <span class="event-avatar-shell">
+                <img class="event-avatar" src="assets/qingti.png" alt="青提" />
+              </span>
+            </div>
+            <p id="eventSubtitle">我在猎杀等你们🅰️</p>
+          </div>
+          <div class="eyebrow page-status">
+            <span class="live-dot" id="liveDot"></span>
+            <span id="statusText">比赛进行中</span>
+            <span class="eyebrow-sep">/</span>
+            <span id="matchMeta">等待第一局</span>
+          </div>
+          <div class="head-stats" aria-label="赛事概况">
+            <div class="head-stat">
+              <span class="head-stat-label">已进行</span>
+              <strong id="statMatches">0</strong>
+              <small>局</small>
+            </div>
+            <div class="head-stat">
+              <span class="head-stat-label">赛点线</span>
+              <strong id="statThreshold">50</strong>
+              <small>分</small>
+            </div>
+            <div class="head-stat">
+              <span class="head-stat-label">参赛队伍</span>
+              <strong id="statTeams">12</strong>
+              <small>队</small>
+            </div>
+            <div class="head-stat accent-stat">
+              <span class="head-stat-label">赛点队伍</span>
+              <strong id="statMatchPoint">0</strong>
+              <small>队</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="champion-strip" id="championStrip" hidden>
+          <div class="champion-strip-icon" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><path d="M7 9h5v7.2c0 2 1.4 3.8 4 3.8s4-1.8 4-3.8V9h5v8c0 4.7-3.4 8-9 8s-9-3.3-9-8V9Z" fill="currentColor"/><path d="M6 8h6l2-4 2 4h6v3H6V8Z" fill="currentColor" opacity=".6"/><path d="M12 27h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div class="champion-strip-copy">
+            <span class="champion-strip-kicker">MATCH POINT CHAMPION · 赛事已定榜</span>
+            <strong id="championStripName">—</strong>
+            <span id="championStripDetail">—</span>
+          </div>
+          <div class="champion-strip-score">
+            <span>最终积分</span>
+            <strong id="championStripPoints">0</strong>
+          </div>
+        </div>
+
+        <div class="dashboard">
+          <section class="panel standings-panel">
+            <header class="panel-head">
+              <div>
+                <h2>总积分榜</h2>
+              </div>
+              <div class="panel-head-meta">
+                <span class="sort-note">同分按总击杀优先排序</span>
+              </div>
+            </header>
+
+            <div class="standings-columns" id="standingsColumns"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view" id="view-matches" data-view="matches">
+        <div class="page-head">
+          <div class="page-heading">
+            <div class="eyebrow"><span class="eyebrow-mark"></span>MATCH HISTORY</div>
+            <h1>对局记录</h1>
+          </div>
+          <div class="page-head-actions">
+            <button class="ghost-btn danger-ghost" id="undoMatchBtn" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M4 12h9a6 6 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>撤销上一局</span>
+            </button>
+            <button class="primary-btn" id="addMatchBtn2" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+              <span>录入赛果</span>
+            </button>
+          </div>
+        </div>
+        <section class="ban-overview" id="banOverview" aria-label="BAN 位详情"></section>
+        <div class="matches-list" id="matchesList"></div>
+      </section>
+
+      <section class="view" id="view-teams" data-view="teams">
+        <div class="page-head">
+          <div class="page-heading">
+            <div class="eyebrow"><span class="eyebrow-mark"></span>TEAM ROSTER</div>
+            <h1>参赛队伍</h1>
+          </div>
+          <div class="page-head-actions">
+            <div class="roster-summary" id="rosterSummary">—</div>
+            <button class="primary-btn" id="addTeamBtn" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+              <span>添加队伍</span>
+            </button>
+          </div>
+        </div>
+        <div class="team-grid" id="teamGrid"></div>
+      </section>
+
+      <section class="view" id="view-settings" data-view="settings">
+        <div class="page-head">
+          <div class="page-heading">
+            <div class="eyebrow"><span class="eyebrow-mark"></span>EVENT SETTINGS</div>
+            <h1>赛事设置</h1>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <details class="panel settings-panel settings-collapsible">
+            <summary class="panel-head">
+              <div>
+                <span class="panel-kicker">GENERAL</span>
+                <h2>基础信息</h2>
+              </div>
+            </summary>
+            <form id="settingsForm" class="settings-form" autocomplete="off">
+              <label class="field">
+                <span class="field-label">赛事名称</span>
+                <input id="settingName" type="text" maxlength="28" required />
+              </label>
+              <label class="field">
+                <span class="field-label">副标题</span>
+                <input id="settingSubtitle" type="text" maxlength="48" />
+              </label>
+              <label class="field">
+                <span class="field-label">开赛点分数</span>
+                <div class="input-suffix">
+                  <input id="settingThreshold" type="number" min="1" max="999" step="1" required />
+                  <span>分</span>
+                </div>
+              </label>
+              <div class="field">
+                <span class="field-label">阵营 BAN 解禁规则</span>
+                <div class="ban-rule-options">
+                  <label class="ban-rule-option">
+                    <input type="radio" name="banReleaseMode" value="earliest" checked />
+                    <span class="ban-rule-card">
+                      <b>方案一 · 最早解禁</b>
+                      <small>某阵营全部被 BAN 后，只移出该阵营最早被 BAN 的传奇。</small>
+                    </span>
+                  </label>
+                  <label class="ban-rule-option">
+                    <input type="radio" name="banReleaseMode" value="all" />
+                    <span class="ban-rule-card">
+                      <b>方案二 · 全员解禁</b>
+                      <small>某阵营全部被 BAN 后，该阵营所有传奇立即移出 BAN 位。</small>
+                    </span>
+                  </label>
+                </div>
+              </div>
+              <label class="field">
+                <span class="field-label">复制统计展示数量</span>
+                <select id="settingLegendCopyLimit">
+                  <option value="3">前三个</option>
+                  <option value="5" selected>前五个</option>
+                  <option value="all">全部</option>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">背景动效</span>
+                <select id="settingBackgroundStyle">
+                  <option value="prism">段位渐变</option>
+                  <option value="classic">暗红网格</option>
+                </select>
+              </label>
+              <div class="form-actions">
+                <button class="primary-btn" type="submit">保存设置</button>
+                <span class="form-note" id="settingsNote">设置将保存在当前浏览器。</span>
+              </div>
+            </form>
+          </details>
+
+          <details class="panel rules-panel settings-collapsible">
+            <summary class="panel-head">
+              <div>
+                <span class="panel-kicker">SCORING</span>
+                <h2>计分规则</h2>
+              </div>
+              <span class="fixed-pill">当前规则</span>
+            </summary>
+            <div class="rule-table">
+              <div class="rule-row rule-head"><span>最终排名</span><span>排名分</span></div>
+              <div class="rule-row"><span>第 1 名</span><b>10</b></div>
+              <div class="rule-row"><span>第 2 名</span><b>7</b></div>
+              <div class="rule-row"><span>第 3 名</span><b>5</b></div>
+              <div class="rule-row"><span>第 4 名</span><b>3</b></div>
+              <div class="rule-row"><span>第 5 名</span><b>2</b></div>
+              <div class="rule-row"><span>第 6 名</span><b>1</b></div>
+              <div class="rule-row"><span>第 7 名及以后</span><b>0</b></div>
+            </div>
+            <p class="rules-note">每击杀额外获得 1 分。赛点资格在每局开始前结算：已到达赛点线的队伍，在本局吃鸡即夺冠并锁定最终榜单。</p>
+            <div class="rules-guide-entry">
+              <button class="ghost-btn rules-guide-btn" id="rulesGuideBtn" type="button">赛制介绍</button>
+            </div>
+          </details>
+
+          <details class="panel data-panel settings-collapsible">
+            <summary class="panel-head">
+              <div>
+                <span class="panel-kicker">DATA</span>
+                <h2>数据与备份</h2>
+              </div>
+            </summary>
+            <div class="data-actions">
+              <button class="data-action" id="exportBtn" type="button">
+                <span class="data-action-icon">
+                  <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v3h16v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <span><b>导出比赛数据</b><small>保存为 JSON 备份文件</small></span>
+              </button>
+              <button class="data-action" id="importBtn" type="button">
+                <span class="data-action-icon">
+                  <svg viewBox="0 0 24 24"><path d="M12 15V3m0 0 4 4m-4-4L8 7M4 17v3h16v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <span><b>导入比赛数据</b><small>从 JSON 备份恢复</small></span>
+              </button>
+              <input id="importFile" type="file" accept="application/json,.json" hidden />
+            </div>
+            <div class="storage-note">
+              <span class="storage-dot"></span>
+              <div>
+                <b id="storageNoteTitle">本地自动保存</b>
+                <p id="storageNoteText">数据存储在当前浏览器中。更换设备或清理浏览器前，请先导出备份。</p>
+              </div>
+            </div>
+          </details>
+
+          <details class="panel storage-panel settings-collapsible">
+            <summary class="panel-head">
+              <div>
+                <span class="panel-kicker">STORAGE</span>
+                <h2>数据存储</h2>
+              </div>
+            </summary>
+            <form id="cloudStorageForm" class="settings-form" autocomplete="off">
+              <div class="storage-location">
+                <span>存储位置</span>
+                <b>Netlify Blobs · 当前站点</b>
+              </div>
+              <div class="cloud-fields" id="cloudFields">
+                <label class="field">
+                  <span class="field-label">管理 Token</span>
+                  <input id="cloudToken" type="password" placeholder="用于上传云端数据" autocomplete="off" />
+                </label>
+                <div class="cloud-actions">
+                  <button class="ghost-btn" id="cloudTestBtn" type="button">测试连接</button>
+                  <button class="ghost-btn" id="cloudPullBtn" type="button">从云端读取</button>
+                  <button class="ghost-btn" id="cloudPushBtn" type="button">上传当前数据</button>
+                  <button class="ghost-btn" id="cloudShareBtn" type="button">复制观众链接</button>
+                </div>
+                <p class="cloud-status" id="cloudStatus">正在连接 Netlify 云端…</p>
+              </div>
+              <div class="form-actions">
+                <button class="primary-btn" type="submit">保存存储设置</button>
+                <span class="form-note">数据读取公开，上传需要管理 Token。</span>
+              </div>
+            </form>
+          </details>
+
+          <details class="panel danger-panel settings-collapsible">
+            <summary class="panel-head">
+              <div>
+                <span class="panel-kicker">DANGER ZONE</span>
+                <h2>重置赛事</h2>
+              </div>
+            </summary>
+            <div class="danger-rows">
+              <div class="danger-row">
+                <div><b>清空所有对局</b><p>保留队伍名单与赛事设置，仅删除比赛记录。</p></div>
+                <button class="ghost-btn danger-ghost" id="clearMatchesBtn" type="button">清空对局</button>
+              </div>
+              <div class="danger-row">
+                <div><b>恢复初始名单</b><p>清除对局与赛事设置，队伍名单恢复为之前保存的自定义初始名单。</p></div>
+                <button class="ghost-btn danger-ghost" id="resetAllBtn" type="button">恢复初始</button>
+              </div>
+            </div>
+          </details>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="modal entry-modal" id="entryDialog" aria-labelledby="entryDialogTitle">
+    <div class="modal-shell">
+      <header class="modal-head entry-head">
+        <div>
+          <span class="panel-kicker">NEW MATCH RESULT</span>
+          <h2 id="entryDialogTitle">录入第 1 局赛果</h2>
+        </div>
+        <div class="entry-head-tools">
+          <button class="legend-entry-status" id="entryLegendBtn" type="button" title="查看或补录传奇选择">
+            <span class="legend-status-dot"></span>
+            <span id="entryLegendStatus">传奇 0/0</span>
+          </button>
+          <label class="map-select">
+            <span>地图</span>
+            <select id="entryMap">
+              <option>世界边缘</option>
+              <option>奥林匹斯</option>
+              <option>残月</option>
+              <option>风暴点</option>
+              <option>破碎月亮</option>
+              <option>其他</option>
+            </select>
+          </label>
+          <button class="icon-close" id="entryCloseBtn" type="button" aria-label="关闭">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </header>
+      <div class="entry-toolbar">
+        <p><span class="drag-hint-icon">⠿</span> 先拖入排名，再填写击杀；放入后可继续拖动整行调整顺序</p>
+        <div class="entry-toolbar-actions">
+          <button class="text-btn" id="entrySortBtn" type="button" title="把全部队伍按当前总积分放入排名">按总积分填入</button>
+        </div>
+      </div>
+      <div class="entry-board">
+        <div class="entry-section-head">
+          <div>
+            <span class="entry-section-kicker">RANKING</span>
+            <b>本局排名</b>
+          </div>
+          <small>从下方拖入队伍，最上方为第 1 名</small>
+        </div>
+        <div class="entry-scroll">
+          <div class="entry-columns">
+            <span></span>
+            <span>排名</span>
+            <span>战队 / 选手</span>
+            <span title="每队本局击杀人数">击杀数</span>
+            <span title="按队伍名次自动计算">排名分</span>
+            <span title="排名分 + 击杀数">本局总分</span>
+          </div>
+          <div class="entry-list" id="entryList"></div>
+        </div>
+        <div class="entry-end-drop" id="entryEndDrop">
+          <span>拖到这里放到当前队伍最后</span>
+        </div>
+      </div>
+      <div class="entry-pool-section">
+        <div class="entry-section-head">
+          <div>
+            <span class="entry-section-kicker">TEAM POOL</span>
+            <b>待排名队伍</b>
+          </div>
+          <small><b id="entryPoolCount">12</b> 支 · 初始按当前总积分排序</small>
+        </div>
+        <div class="entry-pool" id="entryPool"></div>
+      </div>
+      <footer class="modal-foot entry-foot">
+        <div class="entry-total">
+          <span>本局总击杀</span>
+          <b id="entryKillTotal">0</b>
+          <span class="entry-total-sep">·</span>
+          <span>已排名 <b id="entryPlacedTotal">0</b> / <b id="entryTeamTotal">12</b> 队</span>
+        </div>
+        <div class="modal-foot-actions">
+          <button class="ghost-btn" id="entryCancelBtn" type="button">取消</button>
+          <button class="primary-btn" id="entrySaveBtn" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4.2 4.2L19 6.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            保存本局赛果
+          </button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal legend-modal" id="legendDialog" aria-labelledby="legendDialogTitle">
+    <div class="modal-shell">
+      <header class="modal-head legend-head">
+        <div>
+          <span class="panel-kicker">MATCH LEGENDS</span>
+          <h2 id="legendDialogTitle">分配传奇选择</h2>
+        </div>
+        <div class="legend-head-meta">
+          <span class="legend-dialog-count" id="legendDialogCompletion">0 / 0</span>
+          <button class="icon-close" id="legendCloseBtn" type="button" aria-label="关闭">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </header>
+      <div class="legend-entry-body">
+        <div class="legend-teams-scroll">
+          <div class="legend-section-label">
+            <span>TEAM PICKS</span>
+            <b>逐队选择传奇</b>
+            <small>点击选手槽位，从图鉴中选择本局使用的传奇</small>
+          </div>
+          <div class="legend-team-grid" id="legendTeams"></div>
+        </div>
+        <aside class="legend-rate-panel">
+          <div class="legend-rate-head">
+            <div>
+              <span class="panel-kicker">PICK RATE</span>
+              <h3>本局传奇选取率</h3>
+            </div>
+            <button class="text-btn" id="legendCopyBtn" type="button">复制统计</button>
+          </div>
+          <div class="legend-rate-summary" id="legendRateSummary">0 / 0 名选手已选</div>
+          <div class="legend-rate-list" id="legendRateList"></div>
+          <div class="legend-rate-empty" id="legendRateEmpty">选择传奇后自动统计排名</div>
+        </aside>
+      </div>
+      <footer class="modal-foot legend-foot">
+        <div class="legend-foot-hint" id="legendFootHint">可先保存部分选择，保存赛果前需补全</div>
+        <div class="modal-foot-actions">
+          <button class="ghost-btn" id="legendCancelBtn" type="button">取消</button>
+          <button class="primary-btn" id="legendSaveBtn" type="button">保存传奇</button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal legend-picker-modal" id="legendPickerDialog" aria-labelledby="legendPickerTitle">
+    <div class="modal-shell">
+      <header class="modal-head">
+        <div>
+          <span class="panel-kicker">SELECT LEGEND</span>
+          <h2 id="legendPickerTitle">选择传奇</h2>
+        </div>
+        <button class="icon-close" id="legendPickerCloseBtn" type="button" aria-label="关闭">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="legend-picker-toolbar">
+        <label class="legend-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input id="legendPickerSearch" type="search" placeholder="搜索传奇名称" autocomplete="off" />
+        </label>
+        <button class="text-btn" id="legendClearBtn" type="button">清除选择</button>
+      </div>
+      <div class="legend-picker-grid" id="legendPickerGrid"></div>
+    </div>
+  </dialog>
+
+  <dialog class="modal legend-report-modal" id="legendReportDialog" aria-labelledby="legendReportTitle">
+    <div class="modal-shell">
+      <header class="modal-head">
+        <div>
+          <span class="panel-kicker">LEGEND PICK RATE</span>
+          <h2 id="legendReportTitle">本局传奇选取率</h2>
+        </div>
+        <button class="icon-close" id="legendReportCloseBtn" type="button" aria-label="关闭">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="legend-report-dialog-meta" id="legendReportMeta">—</div>
+      <div class="legend-report-dialog-ban" id="legendReportBan"></div>
+      <div class="legend-report-dialog-list" id="legendReportList"></div>
+      <footer class="modal-foot legend-report-foot">
+        <span class="legend-report-hint">按选择次数降序排列 · 相同次数按名称排序</span>
+        <div class="modal-foot-actions">
+          <button class="ghost-btn" id="legendReportCloseBtn2" type="button">关闭</button>
+          <button class="primary-btn" id="legendReportCopyBtn" type="button">复制统计</button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal team-modal" id="teamDialog" aria-labelledby="teamDialogTitle">
+    <div class="modal-shell">
+      <header class="modal-head">
+        <div>
+          <span class="panel-kicker">TEAM PROFILE</span>
+          <h2 id="teamDialogTitle">添加队伍</h2>
+        </div>
+        <button class="icon-close" id="teamCloseBtn" type="button" aria-label="关闭">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <form id="teamForm" class="team-form" autocomplete="off">
+        <input id="teamId" type="hidden" />
+        <label class="field">
+          <span class="field-label">队伍名称</span>
+          <input id="teamName" type="text" maxlength="20" placeholder="例如：TEAM 1 / 夕阳红" required />
+          <span class="field-hint">队伍卡片颜色按队内最高段位自动匹配。</span>
+        </label>
+        <label class="team-restriction-toggle">
+          <input id="teamRestricted" type="checkbox" />
+          <span class="restriction-check" aria-hidden="true"></span>
+          <span class="restriction-copy">
+            <b>选手实力过强 · 能力限制</b>
+            <small>勾选后队伍卡片会显示能力限制标记</small>
+          </span>
+        </label>
+        <div class="field">
+          <span class="field-label">参赛选手与段位 <small>最多 3 人</small></span>
+          <div class="player-editors" id="playerEditors">
+            <div class="player-editor">
+              <span class="player-index">1</span>
+              <input class="player-input" type="text" maxlength="20" placeholder="选手一" />
+              <div class="rank-select-wrap">
+                <span class="rank-preview-slot"><img class="rank-preview" alt="" /></span>
+                <select class="player-rank" data-player-index="0" aria-label="选手一 段位">
+                  <option value="">未设置</option>
+                  <option value="rookie">菜鸟</option>
+                  <option value="bronze">青铜</option>
+                  <option value="silver">白银</option>
+                  <option value="gold">黄金</option>
+                  <option value="platinum">铂金</option>
+                  <option value="diamond">钻石</option>
+                  <option value="master">大师</option>
+                  <option value="predator">猎杀</option>
+                </select>
+              </div>
+            </div>
+            <div class="player-editor">
+              <span class="player-index">2</span>
+              <input class="player-input" type="text" maxlength="20" placeholder="选手二" />
+              <div class="rank-select-wrap">
+                <span class="rank-preview-slot"><img class="rank-preview" alt="" /></span>
+                <select class="player-rank" data-player-index="1" aria-label="选手二 段位">
+                  <option value="">未设置</option>
+                  <option value="rookie">菜鸟</option>
+                  <option value="bronze">青铜</option>
+                  <option value="silver">白银</option>
+                  <option value="gold">黄金</option>
+                  <option value="platinum">铂金</option>
+                  <option value="diamond">钻石</option>
+                  <option value="master">大师</option>
+                  <option value="predator">猎杀</option>
+                </select>
+              </div>
+            </div>
+            <div class="player-editor">
+              <span class="player-index">3</span>
+              <input class="player-input" type="text" maxlength="20" placeholder="选手三" />
+              <div class="rank-select-wrap">
+                <span class="rank-preview-slot"><img class="rank-preview" alt="" /></span>
+                <select class="player-rank" data-player-index="2" aria-label="选手三 段位">
+                  <option value="">未设置</option>
+                  <option value="rookie">菜鸟</option>
+                  <option value="bronze">青铜</option>
+                  <option value="silver">白银</option>
+                  <option value="gold">黄金</option>
+                  <option value="platinum">铂金</option>
+                  <option value="diamond">钻石</option>
+                  <option value="master">大师</option>
+                  <option value="predator">猎杀</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <span class="field-hint">段位会以徽章显示在积分榜和队伍名片中，方便观众了解选手水平。</span>
+        </div>
+        <div class="team-form-preview">
+          <span class="preview-label">队伍名片预览</span>
+          <div class="preview-card" id="teamPreview"></div>
+        </div>
+        <footer class="modal-foot">
+          <button class="ghost-btn" type="button" id="teamCancelBtn">取消</button>
+          <button class="primary-btn" type="submit">保存队伍</button>
+        </footer>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog class="modal confirm-modal" id="confirmDialog" aria-labelledby="confirmTitle">
+    <div class="modal-shell">
+      <div class="confirm-icon" id="confirmIcon">!</div>
+      <h2 id="confirmTitle">确认操作</h2>
+      <p id="confirmMessage"></p>
+      <footer class="modal-foot">
+        <button class="ghost-btn" id="confirmCancelBtn" type="button">取消</button>
+        <button class="primary-btn danger-btn" id="confirmOkBtn" type="button">确认</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal champion-modal" id="championDialog" aria-labelledby="championTitle">
+    <div class="modal-shell">
+      <div class="champion-rays" aria-hidden="true"></div>
+      <div class="champion-crown" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><path d="M10 19h10l7 12 5-18 5 18 7-12h10L50 48H14L10 19Z" fill="currentColor"/><path d="M14 51h36v5H14z" fill="currentColor" opacity=".65"/></svg>
+      </div>
+      <span class="champion-kicker">MATCH POINT CHAMPION</span>
+      <h2 id="championTitle">冠军诞生</h2>
+      <div class="champion-team" id="championTeam"></div>
+      <button class="primary-btn champion-confirm" id="championConfirmBtn" type="button">查看最终榜单</button>
+    </div>
+  </dialog>
+
+  <dialog class="modal rules-guide-modal" id="rulesGuideDialog" aria-labelledby="rulesGuideTitle">
+    <div class="modal-shell">
+      <header class="modal-head">
+        <div>
+          <span class="panel-kicker">TOURNAMENT RULES</span>
+          <h2 id="rulesGuideTitle">赛制介绍</h2>
+        </div>
+        <button class="icon-close" id="rulesGuideCloseBtn" type="button" aria-label="关闭">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="rules-guide-body">
+        <section class="rules-guide-hero">
+          <img class="rules-guide-avatar" src="assets/qingti.png" alt="青提" />
+          <div class="rules-guide-event-main">
+            <span>SERIES FORMAT</span>
+            <div class="rules-guide-title-row">
+              <h3 class="rules-guide-event-name" id="rulesGuideEventName">APEX 青提杯</h3>
+              <span class="rules-guide-session">一周目</span>
+            </div>
+            <div class="rules-guide-format">大逃杀 · 系列赛</div>
+            <div class="rules-guide-time-inline">
+              <span>比赛时间</span>
+              <b>2026年11月7日</b>
+              <small>星期六 · 晚上 8:10 开始</small>
+              <small>7:30 集合进比赛房</small>
+            </div>
+          </div>
+        </section>
+
+        <div class="rules-guide-columns">
+          <div class="rules-guide-column">
+            <section class="rules-guide-card">
+              <span class="rules-guide-num">01</span>
+              <h4>赛点制 <small>MATCH POINT</small></h4>
+              <div class="rules-point-line"><b id="rulesGuideThreshold">50</b><span>分开赛点</span></div>
+              <p>队伍达到赛点线后获得赛点资格。取得资格后，任意一局吃鸡即夺冠，赛事随即定榜。</p>
+            </section>
+
+            <section class="rules-guide-card">
+              <span class="rules-guide-num">02</span>
+              <h4>对局信息 <small>MATCH INFO</small></h4>
+              <div class="rules-info-list">
+                <div class="rules-info-row"><span>模式</span><b>大逃杀</b></div>
+                <div class="rules-info-row"><span>地图</span><b>抽签轮转</b></div>
+                <div class="rules-info-row"><span>服务器</span><b>日服</b></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="rules-guide-column">
+            <section class="rules-guide-card">
+              <span class="rules-guide-num">03</span>
+              <h4>传奇 BAN 位 <small>LEGEND BAN</small></h4>
+              <div class="rules-rule-list">
+                <div class="rules-rule">
+                  <b>首场比赛</b>
+                  <p>全部传奇开放选用。</p>
+                </div>
+                <div class="rules-rule">
+                  <b>后续禁选</b>
+                  <p>每局结束后，选用最多的传奇进入 BAN 位，并在系列赛剩余场次继续禁用。如果选取数量相同，则比较使用该传奇的队伍的最高名次，名次更高者优先进入 BAN；例如屁男和电妹队伍数相同，就看哪边队伍的最高排名更高。</p>
+                </div>
+                <div class="rules-rule">
+                  <b>职业保护</b>
+                  <p>某职业（突击、游击、侦察、支援、控制）即将全员被 BAN 时，解禁该职业最早被 BAN 的传奇。</p>
+                </div>
+                <div class="rules-rule">
+                  <b>例外</b>
+                  <p>密客不进入 BAN 位。</p>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+      <footer class="modal-foot">
+        <span class="form-note">以上为本次系列赛规则；具体对局安排以群内公告为准。</span>
+        <button class="primary-btn" id="rulesGuideOkBtn" type="button">关闭</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <dialog class="modal auth-modal" id="authDialog" aria-labelledby="authTitle">
+    <form class="modal-shell auth-shell" id="authForm" autocomplete="off">
+      <header class="modal-head">
+        <div>
+          <span class="panel-kicker">ADMIN ACCESS</span>
+          <h2 id="authTitle">进入管理模式</h2>
+        </div>
+        <button class="icon-close" id="authCloseBtn" type="button" aria-label="关闭">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="auth-body">
+        <p class="auth-desc">输入管理密码，解锁赛事编辑功能。</p>
+        <label class="auth-field">
+          <span>管理密码</span>
+          <input class="auth-input" id="authPassword" type="password" maxlength="32" spellcheck="false" autocomplete="off" placeholder="请输入密码" />
+        </label>
+        <p class="auth-error" id="authError" hidden>密码不正确，请重试。</p>
+      </div>
+      <footer class="modal-foot">
+        <span class="form-note">仅用于本次管理操作</span>
+        <div class="modal-foot-actions">
+          <button class="ghost-btn" id="authCancelBtn" type="button">取消</button>
+          <button class="primary-btn" type="submit">解锁</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="legends.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
